@@ -1,0 +1,7 @@
+.vscode
+*.o
+*.
+client/client
+server/server
+b-client/b-client
+b-server/b-server

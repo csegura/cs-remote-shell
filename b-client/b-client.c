@@ -194,30 +194,12 @@ int main(int argc, char **argv)
 		if (n_threads > MAX_CONNECTIONS)
 		{
 			printf("Maximum connections reached. (%d)\n", MAX_CONNECTIONS);
-
-			// for (connections = 0; connections < MAX_CONNECTIONS; connections++)
-			// {
-			// 	int *error = NULL;
-			// 	pthread_join(thread[connections], (void *)&error);
-			// 	errors += *error;
-			// 	free(error);
-			// }
-
 			errors += wait_threads(threads, MAX_CONNECTIONS);
 			n_threads = 0;
 		}
 	}
 
-	errors += wait_threads(threads, MAX_CONNECTIONS);
-
-	// // wait for all threads to finish
-	// for (int i = 0; i < MAX_CONNECTIONS; i++)
-	// {
-	// 	int *error;
-	// 	pthread_join(thread[i], (void *)&error);
-	// 	errors += (int)*error;
-	// 	free(error);
-	// }
+	errors += wait_threads(threads, n_threads);
 
 	time(&end);
 

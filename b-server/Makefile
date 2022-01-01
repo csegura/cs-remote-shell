@@ -1,2 +1,2 @@
 b-server: b-server.c b-funcs.c
-	$(CC) $(CCOPTS) -o $@ $^  
+	$(CC) $(CCOPTS) -g -pthread -o $@ $^  

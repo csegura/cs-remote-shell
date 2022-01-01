@@ -8,12 +8,12 @@
 #include <arpa/inet.h>
 #include <limits.h>
 #include <time.h>
+#include <pthread.h>
 #include "../b-server/b-funcs.h"
 
 #define COMMAND_LEN 128
 #define BUFFER_LEN 4096
-#define DEFAULT_PORT 8080
-#define DEFAULT_SERVER "127.0.0.1"
+#define MAX_CONNECTIONS 1000
 
 char *get_command()
 {
@@ -25,60 +25,136 @@ char *get_command()
 	return cmd;
 }
 
-message_t *get_message(int sockfd)
+// void check_message(message_t *message)
+// {
+// 	hash_value received_hash = get_hash(message);
+// 	hash_value calculated_hash = calc_hash(message, 1);
+
+// 	if (received_hash != calculated_hash)
+// 	{
+// 		printf("ERROR: hash mismatch - Received %d Calc %d\n",
+// 					 received_hash,
+// 					 calculated_hash);
+// 	}
+// 	else
+// 	{
+// 		message->hash.value = received_hash;
+// 		// todo: adjust message->size
+// 	}
+// }
+
+message_t *get_message(request_t *request)
 {
+
+	size_t size;
+	read(request->fd, &size, sizeof(size_t));
+	printf("size: %d\n", size);
+
+	hash_t hash;
+	read(request->fd, &hash, sizeof(hash_value));
+	printf("hash: %d\n", hash);
+
 	message_t *message = create_message(NULL, 0);
-	char *chunk = calloc(BUFFER_LEN, sizeof(char));
+	size_t buffer_size = size > 65535 ? 65535 : size;
+	char *chunk = calloc(buffer_size, sizeof(char));
 
 	while (1)
 	{
-		int size = read(sockfd, chunk, BUFFER_LEN);
-		if (size == 0)
+		int received = read(request->fd, chunk, buffer_size);
+		if (received == 0)
 			break;
-		message->bytes = realloc(message->bytes, message->size + size);
-		memcpy(&message->bytes[message->size], chunk, size);
-		message->size += size;
-		if (size < BUFFER_LEN)
+		message->bytes = realloc(message->bytes, message->size + received);
+		memcpy(&message->bytes[message->size], chunk, received);
+		message->size += received;
+		if (size < buffer_size)
 			break;
-		bzero(chunk, BUFFER_LEN);
+		bzero(chunk, buffer_size);
+	}
+
+	printf("RCVD bytes: %d - %d\n", message->size, size);
+	message->hash = calc_hash(message);
+
+	if (hash != message->hash)
+	{
+
+		printf("ERROR: hash mismatch - Received %d Calc %d\n",
+					 hash,
+					 message->hash);
 	}
 
 	return message;
 }
 
-void func(int sockfd)
+void *client(void *args)
 {
-	char *cmd;
+	request_t *request = (request_t *)args;
+
 	message_t *message;
 	time_t start, end;
 
-	while (1)
+	// printf("[%2d:%3d] SENT: %s cmd\n",
+	// 			 request->fd,
+	// 			 request->serial,
+	// 			 bytes_to_human(request->size));
+
+	request_message_t *request_message = create_request_message(request);
+	write(request->fd, request_message, sizeof(request_message_t));
+
+	start = clock();
+	message = get_message(request);
+	end = clock();
+
+	printf("[%2d:%3d] %s RCVD: Message %s bytes in %1fms \n",
+				 request->fd,
+				 request->serial,
+				 message->hash == 0 ? "FAIL" : "-OK-",
+				 bytes_to_human(message->size),
+				 (double)(end - start) / CLOCKS_PER_SEC / 1000);
+
+	delete_message(message);
+	close(request->fd);
+	delete_request(request);
+	delete_request_message(request_message);
+}
+
+int connect_server(char *server, int port)
+{
+
+	int sockfd, connfd;
+	struct sockaddr_in servaddr, cli;
+
+	printf("Connecting to %s:%d\n", server, port);
+
+	// socket create and varification
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (sockfd == -1)
 	{
-		cmd = get_command();
-		write(sockfd, cmd, strlen(cmd));
-
-		if ((strncmp(cmd, "exit", 4)) == 0)
-		{
-			printf("Client Exit...\n");
-			break;
-		}
-		start = clock();
-		message = get_message(sockfd);
-		end = clock();
-
-		unsigned int received_hash = get_hash(message);
-		printf("RCVD: %d bytes - Message %d bytes [%u hash] in %1fms \n",
-					 message->size,
-					 message->size - HASH_SIZE,
-					 received_hash,
-					 (double)(end - start) / CLOCKS_PER_SEC / 1000);
-
-		unsigned int hash = calc_hash(message, 1);
-		printf("\nRESP: hash %u -> calculated %u\n", received_hash, hash);
-
-		free(message->bytes);
-		free(message);
+		printf("Socket creation failed...\n");
+		exit(0);
 	}
+	//else
+	//printf("Socket successfully created..\n");
+
+	bzero(&servaddr, sizeof(servaddr));
+
+	// assign IP, PORT
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = inet_addr(server);
+	servaddr.sin_port = htons(port);
+
+	// connect the client socket to server socket
+	connfd = connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+
+	if (connfd != 0)
+	{
+		printf("Connection failed.\n");
+		exit(0);
+	}
+	else
+		printf("Connected.\n");
+
+	return sockfd;
 }
 
 int main(int argc, char **argv)
@@ -86,8 +162,12 @@ int main(int argc, char **argv)
 	int opt;
 	int port = DEFAULT_PORT;
 	char *server = DEFAULT_SERVER;
+	int threads = 1;
+	char *command = NULL;
+	pthread_t thread[MAX_CONNECTIONS];
+	int connections = 0;
 
-	while ((opt = getopt(argc, argv, "s:p:")) != -1)
+	while ((opt = getopt(argc, argv, "s:p:f:c:")) != -1)
 	{
 		switch (opt)
 		{
@@ -96,6 +176,12 @@ int main(int argc, char **argv)
 			break;
 		case 'p':
 			port = atoi(optarg);
+			break;
+		case 'f':
+			threads = atoi(optarg);
+			break;
+		case 'c':
+			command = optarg;
 			break;
 		default:
 			if (opt == 's')
@@ -112,40 +198,42 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	printf("Connecting to %s:%d\n", server, port);
+	printf("\ncommand: %s | proccess %d\n", command, threads);
 
-	int sockfd, connfd;
-	struct sockaddr_in servaddr, cli;
-
-	// socket create and varification
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1)
+	for (int i = 0; i < threads; i++)
 	{
-		printf("Socket creation failed...\n");
-		exit(0);
+		int connfd = connect_server(server, port);
+
+		size_t size = atoi(command) * 1024;
+
+		printf("%lu %s\n", size, bytes_to_human(size));
+
+		request_t *request = create_request(connfd, i, size, 0);
+
+		if (pthread_create(&thread[connections++], NULL, client, (void *)request) < 0)
+		{
+			perror("could not create thread");
+			exit(1);
+		}
+
+		if (connections >= MAX_CONNECTIONS)
+		{
+			printf("Maximum connections reached. (%d)\n", connections);
+
+			for (connections = 0; connections < MAX_CONNECTIONS; connections++)
+			{
+				pthread_join(thread[connections], NULL);
+			}
+
+			printf("Finished. (%d)\n", connections);
+
+			connections = 0;
+		}
 	}
-	else
-		printf("Socket successfully created..\n");
 
-	bzero(&servaddr, sizeof(servaddr));
+	// wait for all threads to finish
+	for (int i = 0; i < threads; i++)
+		pthread_join(thread[i], NULL);
 
-	// assign IP, PORT
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = inet_addr(server);
-	servaddr.sin_port = htons(port);
-
-	// connect the client socket to server socket
-	if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0)
-	{
-		printf("Connection failed.\n");
-		exit(0);
-	}
-	else
-		printf("Connected.\n");
-
-	// function for chat
-	func(sockfd);
-
-	// close the socket
-	close(sockfd);
+	return 0;
 }

@@ -16,7 +16,6 @@
 #include "b-funcs.h"
 
 #define COMMAND_LEN 24
-#define DEFAULT_PORT 8080
 #define MAX_CONNECTIONS 50
 #define BUFFER_SIZE (1024 * 32L)
 
@@ -29,6 +28,7 @@ volatile sig_atomic_t running = 1;
 // close gracefully
 void sig_handler(int signo)
 {
+	printf("SIGNAL %d\n", signo);
 	running = 0;
 }
 
@@ -93,8 +93,6 @@ void *server(void *args)
 
 	request_message_t *request_message = malloc(sizeof(request_message_t));
 
-	// while (1)
-	// {
 	if (read(connfd, request_message, sizeof(request_message_t)))
 	{
 
@@ -106,9 +104,7 @@ void *server(void *args)
 					 bytes_to_human(request_message->size, buffer));
 
 		process_request(connfd, request_message);
-		// break;
 	}
-	// }
 
 	delete_thread_args(thread_args);
 	close(connfd);
@@ -197,8 +193,25 @@ int main(int argc, char **argv)
 	sigemptyset(&new_action.sa_mask);
 	new_action.sa_flags = 0;
 	sigaction(SIGINT, &new_action, NULL);
-
-	//signal(SIGINT, (void *)sig_handler);
+	sigaction(SIGTERM, &new_action, NULL);
+	sigaction(SIGQUIT, &new_action, NULL);
+	sigaction(SIGKILL, &new_action, NULL);
+	sigaction(SIGSTOP, &new_action, NULL);
+	sigaction(SIGTSTP, &new_action, NULL);
+	sigaction(SIGCONT, &new_action, NULL);
+	sigaction(SIGUSR1, &new_action, NULL);
+	sigaction(SIGUSR2, &new_action, NULL);
+	sigaction(SIGALRM, &new_action, NULL);
+	sigaction(SIGCHLD, &new_action, NULL);
+	sigaction(SIGPIPE, &new_action, NULL);
+	sigaction(SIGTTIN, &new_action, NULL);
+	sigaction(SIGTTOU, &new_action, NULL);
+	sigaction(SIGXCPU, &new_action, NULL);
+	sigaction(SIGXFSZ, &new_action, NULL);
+	sigaction(SIGVTALRM, &new_action, NULL);
+	sigaction(SIGPROF, &new_action, NULL);
+	sigaction(SIGWINCH, &new_action, NULL);
+	sigaction(SIGIO, &new_action, NULL);
 
 	len = sizeof(cli);
 

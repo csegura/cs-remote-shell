@@ -18,6 +18,7 @@
 #define COMMAND_LEN 24
 #define DEFAULT_PORT 8080
 #define MAX_CONNECTIONS 50
+#define BUFFER_SIZE (1024 * 32L)
 
 #define ASCII_START 0 //32
 #define ASCII_END 255 //126
@@ -45,8 +46,19 @@ void reply_request(int connfd, message_t *message)
 {
 	write(connfd, &message->size, sizeof(u_int64_t));
 	write(connfd, &message->hash, sizeof(hash_t));
-	write(connfd, message->bytes, message->size);
-	//close(connfd);
+
+	size_t buffer;
+	size_t sent = 0;
+	size_t total_sent = 0;
+
+	while (message->size - total_sent)
+	{
+		buffer = (message->size - total_sent) > BUFFER_SIZE ? BUFFER_SIZE : (message->size - total_sent);
+		sent = write(connfd, &message->bytes[total_sent], buffer);
+		total_sent += sent;
+	}
+
+	//	write(connfd, message->bytes, message->size);
 }
 
 // execute command
@@ -81,23 +93,22 @@ void *server(void *args)
 
 	request_message_t *request_message = malloc(sizeof(request_message_t));
 
-	while (1)
+	// while (1)
+	// {
+	if (read(connfd, request_message, sizeof(request_message_t)))
 	{
-		if (read(connfd, request_message, sizeof(request_message_t)))
-		{
-			//decode_request_message(request_message);
 
-			// print received command
-			printf("(%3d:%3d) REQU: %d - %s \n",
-						 connfd,
-						 request_message->serial,
-						 request_message->size,
-						 bytes_to_human(request_message->size, buffer));
+		// print received command
+		printf("(%3d:%3d) REQU: %d - %s \n",
+					 connfd,
+					 request_message->serial,
+					 request_message->size,
+					 bytes_to_human(request_message->size, buffer));
 
-			process_request(connfd, request_message);
-			break;
-		}
+		process_request(connfd, request_message);
+		// break;
 	}
+	// }
 
 	delete_thread_args(thread_args);
 	close(connfd);

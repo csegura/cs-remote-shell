@@ -24,7 +24,7 @@ message_t *get_message(request_t *request)
 
 	message_t *message = create_message(NULL, 0);
 	size_t buffer_size = size > 65535 ? 65535 : size;
-	char *chunk = calloc(buffer_size, sizeof(char));
+	char *chunk = (char *)calloc(buffer_size, sizeof(char));
 
 	while (1)
 	{
@@ -32,7 +32,7 @@ message_t *get_message(request_t *request)
 		if (received == 0)
 			break;
 
-		message->bytes = realloc(message->bytes, message->size + received);
+		message->bytes = (char *)realloc(message->bytes, message->size + received);
 		memcpy(&message->bytes[message->size], chunk, received);
 		message->size += received;
 
@@ -57,7 +57,7 @@ void *client(void *args)
 	message_t *message;
 	time_t start, end;
 	char buffer[25];
-	int *error = malloc(sizeof(int));
+	int *error = (int *)malloc(sizeof(int));
 
 	request_message_t *request_message = create_request_message(request);
 	write(request->fd, request_message, sizeof(request_message_t));
@@ -87,9 +87,7 @@ int connect_server(char *server, int port)
 {
 
 	int sockfd, connfd;
-	struct sockaddr_in servaddr, cli;
-
-	//printf("Connecting to %s:%d\n", server, port);
+	struct sockaddr_in servaddr;
 
 	// socket create and varification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -205,6 +203,7 @@ int main(int argc, char **argv)
 	errors += wait_threads_end(threads, n_threads);
 
 	time(&end);
+
 	char buffer[25];
 	printf("Elapsed time %2fs - %d errors - %s reived\n",
 				 (double)(end - start),

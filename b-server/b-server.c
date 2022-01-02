@@ -111,7 +111,7 @@ void *server(void *args)
 	return NULL;
 }
 
-int establish_listen_socket(int port)
+int establish_listen_socket(char *address, int port)
 {
 	int sockfd;
 	struct sockaddr_in serv_addr;
@@ -128,8 +128,9 @@ int establish_listen_socket(int port)
 
 	// set the fields
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	//serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons(port);
+	inet_pton(AF_INET, address, &serv_addr.sin_addr);
 
 	// bind the socket
 	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
@@ -168,24 +169,40 @@ int main(int argc, char **argv)
 	int port = DEFAULT_PORT;
 	struct sockaddr_in servaddr, cli;
 	char ipstr[INET_ADDRSTRLEN];
+	char address[INET_ADDRSTRLEN];
 
 	pthread_t thread[MAX_CONNECTIONS];
 	int connections = 0;
 
 	// get the port number from command line
-	while ((opt = getopt(argc, argv, "p:")) != -1)
+	while ((opt = getopt(argc, argv, "p:s:")) != -1)
 	{
 		switch (opt)
 		{
 		case 'p':
 			port = atoi(optarg);
 			break;
+		case 's':
+			strcpy(address, optarg);
+			break;
+		default:
+			if (opt == 's')
+				fprintf(stderr, "Option -%c requires an argument.\n", opt);
+			else if (isprint(opt))
+				fprintf(stderr, "Unknown option `-%c'.\n", opt);
+			exit(0);
 		}
+	}
+
+	if (!address)
+	{
+		printf("Usage: %s -s <server> [-p <port>]\n", argv[0]);
+		exit(0);
 	}
 
 	setbuf(stdout, NULL);
 
-	sockfd = establish_listen_socket(port);
+	sockfd = establish_listen_socket(address, port);
 
 	// set signal handler
 	struct sigaction new_action, old_action;

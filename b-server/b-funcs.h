@@ -1,6 +1,7 @@
 #ifndef B_FUNCS_H
 #define B_FUNCS_H
 #include <stdio.h>
+#include <stdint.h>
 
 #define DEFAULT_PORT 8080
 #define DEFAULT_SERVER "127.0.0.1"
@@ -37,7 +38,7 @@ typedef struct
 typedef struct
 {
 	char *bytes;
-	size_t size;
+	uint64_t size;
 	hash_t hash;
 } message_t;
 

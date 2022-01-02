@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <netdb.h>
@@ -42,7 +43,7 @@ char *gen_random_bytes(int size)
 
 void reply_request(int connfd, message_t *message)
 {
-	write(connfd, &message->size, sizeof(size_t));
+	write(connfd, &message->size, sizeof(u_int64_t));
 	write(connfd, &message->hash, sizeof(hash_t));
 	write(connfd, message->bytes, message->size);
 	//close(connfd);

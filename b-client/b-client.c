@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@ message_t *get_message(request_t *request)
 {
 
 	size_t size;
-	read(request->fd, &size, sizeof(size_t));
+	read(request->fd, &size, sizeof(uint64_t));
 
 	hash_t hash;
 	read(request->fd, &hash, sizeof(hash_t));

@@ -12,6 +12,7 @@
 #include "../b-server/b-funcs.h"
 
 #define MAX_CONNECTIONS 50
+#define BUFFER_SIZE (1024 * 32L)
 
 message_t *get_message(request_t *request)
 {
@@ -20,28 +21,41 @@ message_t *get_message(request_t *request)
 	read(request->fd, &size, sizeof(size_t));
 
 	hash_t hash;
-	read(request->fd, &hash, sizeof(hash_value));
+	read(request->fd, &hash, sizeof(hash_t));
+
+	size_t buffer_size = size > BUFFER_SIZE ? BUFFER_SIZE : size;
+
+	printf("%d size: %u hash: %d | buffer: %u\n", request->fd, size, hash, buffer_size);
 
 	message_t *message = create_message(NULL, 0);
-	size_t buffer_size = size > 65535 ? 65535 : size;
-	char *chunk = (char *)calloc(buffer_size, sizeof(char));
+	char *chunk = calloc(buffer_size, sizeof(char));
+
+	printf("%d - %u\n", request->fd, buffer_size);
 
 	while (1)
 	{
 		int received = read(request->fd, chunk, buffer_size);
-		if (received == 0)
-			break;
 
-		message->bytes = (char *)realloc(message->bytes, message->size + received);
+		if (received == -1)
+		{
+			perror("read");
+			exit(1);
+		}
+
+		message->bytes = realloc(message->bytes, message->size + received);
 		memcpy(&message->bytes[message->size], chunk, received);
 		message->size += received;
 
-		if (size < buffer_size)
+		if (received == 0)
 			break;
+		//if (received < buffer_size)
+		//	break;
 	}
 
-	message->hash = calc_hash(message);
+	printf("message size %d\n", message->size);
 
+	message->hash = calc_hash(message);
+	printf("hash %d - message %d\n", hash, message->hash);
 	if (hash != message->hash)
 	{
 		message->hash = 0;
@@ -57,10 +71,15 @@ void *client(void *args)
 	message_t *message;
 	time_t start, end;
 	char buffer[25];
-	int *error = (int *)malloc(sizeof(int));
+	int *error = malloc(sizeof(int));
 
 	request_message_t *request_message = create_request_message(request);
-	write(request->fd, request_message, sizeof(request_message_t));
+	if (write(request->fd, request_message, sizeof(request_message_t)) == -1)
+	{
+		printf("Error writing to socket %d\n", request->fd);
+		*error = 1;
+		pthread_exit(error);
+	}
 
 	start = clock();
 	message = get_message(request);
@@ -120,7 +139,7 @@ int connect_server(char *server, int port)
 int wait_threads_end(pthread_t *threads, int n_threads)
 {
 	int errors = 0;
-	int *error;
+	int *error = NULL;
 	int i;
 
 	for (i = 0; i < n_threads; i++)
@@ -129,6 +148,7 @@ int wait_threads_end(pthread_t *threads, int n_threads)
 		errors += *error;
 		free(error);
 	}
+
 	return errors;
 }
 

@@ -21,6 +21,7 @@ typedef unsigned int hash_t;
 typedef struct
 {
 	int serial;
+	char pad[4];
 	size_t size;
 	int type;
 } request_message_t;
@@ -56,7 +57,6 @@ thread_args_t *create_thread_args(int fd, char *cmd);
 void delete_thread_args(thread_args_t *args);
 
 /* utils */
-
-char *bytes_to_human(double bytes);
+char *bytes_to_human(double bytes, char *buffer);
 
 #endif

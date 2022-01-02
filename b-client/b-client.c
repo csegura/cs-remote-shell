@@ -31,12 +31,13 @@ message_t *get_message(request_t *request)
 		int received = read(request->fd, chunk, buffer_size);
 		if (received == 0)
 			break;
+
 		message->bytes = realloc(message->bytes, message->size + received);
 		memcpy(&message->bytes[message->size], chunk, received);
 		message->size += received;
+
 		if (size < buffer_size)
 			break;
-		//bzero(chunk, buffer_size);
 	}
 
 	message->hash = calc_hash(message);
@@ -46,6 +47,7 @@ message_t *get_message(request_t *request)
 		message->hash = 0;
 	}
 
+	free(chunk);
 	return message;
 }
 
@@ -54,6 +56,7 @@ void *client(void *args)
 	request_t *request = (request_t *)args;
 	message_t *message;
 	time_t start, end;
+	char buffer[25];
 	int *error = malloc(sizeof(int));
 
 	request_message_t *request_message = create_request_message(request);
@@ -63,12 +66,12 @@ void *client(void *args)
 	message = get_message(request);
 	end = clock();
 
-	printf("[%2d:%3d] %s RCVD: Message %s bytes in %1fms \n",
+	printf("[%2d:%3d] %s RCVD: Message %s bytes in %3fms \n",
 				 request->fd,
 				 request->serial,
 				 message->hash == 0 ? "FAIL" : "-OK-",
-				 bytes_to_human(message->size),
-				 (double)(end - start) / CLOCKS_PER_SEC / 1000);
+				 bytes_to_human(message->size, buffer),
+				 (double)(end - start) / (CLOCKS_PER_SEC / 1000));
 
 	*error = message->hash == 0 ? 1 : 0;
 
@@ -116,7 +119,7 @@ int connect_server(char *server, int port)
 	return sockfd;
 }
 
-int wait_threads(pthread_t *threads, int n_threads)
+int wait_threads_end(pthread_t *threads, int n_threads)
 {
 	int errors = 0;
 	int *error;
@@ -194,19 +197,19 @@ int main(int argc, char **argv)
 		if (n_threads > MAX_CONNECTIONS)
 		{
 			printf("Maximum connections reached. (%d)\n", MAX_CONNECTIONS);
-			errors += wait_threads(threads, MAX_CONNECTIONS);
+			errors += wait_threads_end(threads, MAX_CONNECTIONS);
 			n_threads = 0;
 		}
 	}
 
-	errors += wait_threads(threads, n_threads);
+	errors += wait_threads_end(threads, n_threads);
 
 	time(&end);
-
+	char buffer[25];
 	printf("Elapsed time %2fs - %d errors - %s reived\n",
 				 (double)(end - start),
 				 errors,
-				 bytes_to_human(size * n_requests));
+				 bytes_to_human(size * n_requests, buffer));
 
 	return 0;
 }

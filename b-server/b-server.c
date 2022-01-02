@@ -22,14 +22,12 @@
 #define ASCII_END 255 //126
 #define ASCII_SET (ASCII_END - ASCII_START)
 
+volatile sig_atomic_t running = 1;
+
 // close gracefully
 void sig_handler(int signo)
 {
-	if (signo == SIGINT)
-	{
-		printf("SIGINT\n");
-		exit(0);
-	}
+	running = 0;
 }
 
 char *gen_random_bytes(int size)
@@ -47,14 +45,14 @@ void reply_request(int connfd, message_t *message)
 	write(connfd, &message->size, sizeof(size_t));
 	write(connfd, &message->hash, sizeof(hash_t));
 	write(connfd, message->bytes, message->size);
-	close(connfd);
+	//close(connfd);
 }
 
 // execute command
 void process_request(int connfd, request_message_t *rm)
 {
 	time_t start, end;
-
+	char buffer[25];
 	char *bytes = gen_random_bytes(rm->size);
 
 	message_t *message = create_message(bytes, rm->size);
@@ -66,17 +64,19 @@ void process_request(int connfd, request_message_t *rm)
 	printf("(%3d:%3d) SENT: %s bytes [%u hash] in %1fms\n",
 				 connfd,
 				 rm->serial,
-				 bytes_to_human(message->size),
+				 bytes_to_human(message->size, buffer),
 				 message->hash,
 				 (double)(end - start) / CLOCKS_PER_SEC / 1000);
 
 	delete_message(message);
+	delete_request_message(rm);
 }
 
 void *server(void *args)
 {
 	thread_args_t *thread_args = (thread_args_t *)args;
 	int connfd = thread_args->fd;
+	char buffer[25];
 
 	request_message_t *request_message = malloc(sizeof(request_message_t));
 
@@ -91,14 +91,14 @@ void *server(void *args)
 						 connfd,
 						 request_message->serial,
 						 request_message->size,
-						 bytes_to_human(request_message->size));
+						 bytes_to_human(request_message->size, buffer));
 
 			process_request(connfd, request_message);
 			break;
 		}
 	}
 
-	delete_thread_args(args);
+	delete_thread_args(thread_args);
 	close(connfd);
 	return NULL;
 }
@@ -143,6 +143,15 @@ int establish_listen_socket(int port)
 	return sockfd;
 }
 
+void wait_threads_end(pthread_t *threads, int n_threads)
+{
+	int i;
+	for (i = 0; i < n_threads; i++)
+	{
+		pthread_join(threads[i], NULL);
+	}
+}
+
 // Server
 int main(int argc, char **argv)
 {
@@ -171,12 +180,18 @@ int main(int argc, char **argv)
 	sockfd = establish_listen_socket(port);
 
 	// set signal handler
-	signal(SIGINT, (void *)sig_handler);
+	struct sigaction new_action, old_action;
+	new_action.sa_handler = sig_handler;
+	sigemptyset(&new_action.sa_mask);
+	new_action.sa_flags = 0;
+	sigaction(SIGINT, &new_action, NULL);
+
+	//signal(SIGINT, (void *)sig_handler);
 
 	len = sizeof(cli);
 
 	// Server loop
-	while (1)
+	while (running)
 	{
 		// Accept the data packet from client and verification
 		connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
@@ -184,7 +199,7 @@ int main(int argc, char **argv)
 		if (connfd < 0)
 		{
 			printf("Server accept failed...\n");
-			exit(1);
+			break;
 		}
 
 		thread_args_t *args = create_thread_args(connfd, NULL);
@@ -192,26 +207,23 @@ int main(int argc, char **argv)
 		if (pthread_create(&thread[connections++], NULL, server, (void *)args) < 0)
 		{
 			perror("could not create thread");
-			exit(1);
+			break;
 		}
 
 		int res = getpeername(connfd, (struct sockaddr *)&cli, &len);
 		strcpy(ipstr, inet_ntoa(cli.sin_addr));
 		printf("[%3d:%3d] Connection accepted from %s\n", connections, connfd, ipstr);
 
-		if (connections >= MAX_CONNECTIONS)
+		if (connections > MAX_CONNECTIONS)
 		{
 			printf("Maximum connections reached. (%d)\n", connections);
 
-			for (connections = 0; connections < MAX_CONNECTIONS; connections++)
-			{
-				pthread_join(thread[connections], NULL);
-			}
-
-			printf("Finished. (%d)\n", connections);
-
+			wait_threads_end(thread, MAX_CONNECTIONS);
 			connections = 0;
 		}
 	}
+
+	wait_threads_end(thread, connections);
+
 	printf("\nEnded.");
 }

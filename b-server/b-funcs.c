@@ -63,6 +63,7 @@ void delete_request(request_t *request)
 request_message_t *create_request_message(request_t *request)
 {
   request_message_t *rm = malloc(sizeof(request_message_t));
+  bzero(rm, sizeof(request_message_t));
   rm->serial = htons(request->serial);
   rm->size = htonl(request->size);
   rm->type = htons(request->type);
@@ -87,11 +88,11 @@ void delete_thread_args(thread_args_t *args)
 }
 
 /* convert bytes to human readable format */
-char *bytes_to_human(double bytes)
+char *bytes_to_human(double bytes, char *buffer)
 {
-  static char buffer[256];
   char *units[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
   int i = 0;
+  bzero(buffer, sizeof(buffer));
 
   while (bytes >= 1024)
   {

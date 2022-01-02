@@ -37,6 +37,8 @@ message_t *get_message(request_t *request)
 	{
 		int received = read(request->fd, chunk, buffer_size);
 
+		printf(".");
+		// Error
 		if (received == -1)
 		{
 			perror("read");
@@ -47,6 +49,7 @@ message_t *get_message(request_t *request)
 		memcpy(&message->bytes[message->size], chunk, received);
 		message->size += received;
 
+		// EOF
 		if (received == 0)
 			break;
 		//if (received < buffer_size)
@@ -226,7 +229,7 @@ int main(int argc, char **argv)
 	time(&end);
 
 	char buffer[25];
-	printf("Elapsed time %2fs - %d errors - %s reived\n",
+	printf("Elapsed time %2fs - %d errors - %s received\n",
 				 (double)(end - start),
 				 errors,
 				 bytes_to_human(size * n_requests, buffer));

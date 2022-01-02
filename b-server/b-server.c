@@ -54,7 +54,7 @@ void reply_request(int connfd, message_t *message)
 	while (message->size - total_sent)
 	{
 		buffer = (message->size - total_sent) > BUFFER_SIZE ? BUFFER_SIZE : (message->size - total_sent);
-		sent = write(connfd, &message->bytes[total_sent], buffer);
+		sent = send(connfd, &message->bytes[total_sent], buffer, MSG_NOSIGNAL);
 		total_sent += sent;
 	}
 
@@ -193,25 +193,7 @@ int main(int argc, char **argv)
 	sigemptyset(&new_action.sa_mask);
 	new_action.sa_flags = 0;
 	sigaction(SIGINT, &new_action, NULL);
-	sigaction(SIGTERM, &new_action, NULL);
-	sigaction(SIGQUIT, &new_action, NULL);
-	sigaction(SIGKILL, &new_action, NULL);
-	sigaction(SIGSTOP, &new_action, NULL);
-	sigaction(SIGTSTP, &new_action, NULL);
-	sigaction(SIGCONT, &new_action, NULL);
-	sigaction(SIGUSR1, &new_action, NULL);
-	sigaction(SIGUSR2, &new_action, NULL);
-	sigaction(SIGALRM, &new_action, NULL);
-	sigaction(SIGCHLD, &new_action, NULL);
-	sigaction(SIGPIPE, &new_action, NULL);
-	sigaction(SIGTTIN, &new_action, NULL);
-	sigaction(SIGTTOU, &new_action, NULL);
-	sigaction(SIGXCPU, &new_action, NULL);
-	sigaction(SIGXFSZ, &new_action, NULL);
-	sigaction(SIGVTALRM, &new_action, NULL);
-	sigaction(SIGPROF, &new_action, NULL);
-	sigaction(SIGWINCH, &new_action, NULL);
-	sigaction(SIGIO, &new_action, NULL);
+	//sigaction(SIGPIPE, &new_action, NULL);
 
 	len = sizeof(cli);
 

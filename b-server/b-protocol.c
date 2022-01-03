@@ -15,7 +15,7 @@ hash_t calc_hash(message_t *message)
   hash_value hash = 0, c;
   size_t size = message->size;
 
-  for (int i = 0; i < size; i++)
+  for (size_t i = 0; i < size; i++)
   {
     c = (unsigned char)message->bytes[i];
     hash = (hash << 3) + (hash >> (HASH_SIZE * CHAR_BIT - 3)) + c;
@@ -87,32 +87,4 @@ thread_args_t *create_thread_args(int sockfd, int thread)
 void delete_thread_args(thread_args_t *args)
 {
   free(args);
-}
-
-/* convert bytes to human readable format */
-char *bytes_to_human(double bytes, char *buffer)
-{
-  char *units[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
-  int i = 0;
-  bzero(buffer, sizeof(*buffer));
-
-  while (bytes >= 1024)
-  {
-    bytes /= 1024;
-    i++;
-  }
-
-  sprintf(buffer, "%.*f %s", i ? 2 : 0, bytes, units[i]);
-  return buffer;
-}
-
-/* simple error check */
-int pass(int result, char *msg_error)
-{
-  if (result == -1)
-  {
-    fprintf(stderr, "%s\n", msg_error);
-    exit(1);
-  }
-  return result;
 }

@@ -10,7 +10,8 @@
 #include <limits.h>
 #include <time.h>
 #include <pthread.h>
-#include "../b-server/b-funcs.h"
+#include "../b-server/b-protocol.h"
+#include "../b-server/b-tools.h"
 
 #define MAX_CONNECTIONS 50
 #define BUFFER_SIZE (1024 * 32L)
@@ -127,22 +128,6 @@ int connect_server(char *server, int port)
 			 ERROR_CONNECTION);
 
 	return sockfd;
-}
-
-int wait_threads_end(pthread_t *threads, int n_threads)
-{
-	int errors = 0;
-	int *error = NULL;
-	int i;
-
-	for (i = 0; i < n_threads; i++)
-	{
-		pthread_join(threads[i], (void *)&error);
-		errors += *error;
-		free(error);
-	}
-
-	return errors;
 }
 
 int main(int argc, char **argv)

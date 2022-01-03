@@ -9,11 +9,12 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
-#include <signal.h>
+
 #include <time.h>
 #include <limits.h>
 #include <pthread.h>
-#include "b-funcs.h"
+#include "b-protocol.h"
+#include "b-tools.h"
 
 #define COMMAND_LEN 24
 #define MAX_CONNECTIONS 50
@@ -22,31 +23,6 @@
 #define ASCII_START 0 //32
 #define ASCII_END 255 //126
 #define ASCII_SET (ASCII_END - ASCII_START)
-
-volatile sig_atomic_t running = 1;
-
-void sig_handler(int signo)
-{
-	printf("Received SIGNAL %d\n", signo);
-	running = 0;
-}
-
-void setup_signals()
-{
-	struct sigaction signal_action;
-	signal_action.sa_handler = sig_handler;
-	sigemptyset(&signal_action.sa_mask);
-	signal_action.sa_flags = 0;
-	sigaction(SIGINT, &signal_action, NULL);
-
-	// struct sigaction
-	// 		oldact,
-	// 		act = {
-	// 				.sa_handler = SIG_IGN,
-	// 				.sa_flags = 0,
-	// 		};
-	// sigaction(SIGPIPE, &act, &oldact);
-}
 
 char *gen_random_bytes(int size)
 {
@@ -106,6 +82,7 @@ void *server(void *args)
 	thread_args_t *thread_args = (thread_args_t *)args;
 	int connfd = thread_args->fd;
 	char buffer[25];
+	int *error = malloc(sizeof(int));
 
 	request_message_t *request_message = malloc(sizeof(request_message_t));
 
@@ -124,7 +101,8 @@ void *server(void *args)
 
 	delete_thread_args(thread_args);
 	close(connfd);
-	return NULL;
+	*error = 0;
+	pthread_exit(error);
 }
 
 int establish_listen_socket(char *address, int port)
@@ -152,14 +130,6 @@ int establish_listen_socket(char *address, int port)
 	printf("Server started.\nSocket successfully binded at port %d.\n", port);
 
 	return sockfd;
-}
-
-void wait_threads_end(pthread_t *threads, int n_threads)
-{
-	for (int i = 0; i < n_threads; i++)
-	{
-		pthread_join(threads[i], NULL);
-	}
 }
 
 // Server
@@ -232,16 +202,16 @@ int main(int argc, char **argv)
 		strcpy(ipstr, inet_ntoa(cli.sin_addr));
 		printf("[%3d:%3d] Connection accepted from %s\n", connection, connfd, ipstr);
 
-		if (connections > MAX_CONNECTIONS)
+		if (connection > MAX_CONNECTIONS)
 		{
 			printf("Maximum connections reached. (%d)\n", connection);
 
 			wait_threads_end(thread, MAX_CONNECTIONS);
-			connections = 0;
+			connection = 0;
 		}
 	}
 
-	wait_threads_end(thread, connections);
+	wait_threads_end(thread, connection);
 
 	printf("\nEnded.");
 }

@@ -57,7 +57,7 @@ void delete_message(message_t *message);
 request_t *create_request(int fd, int serial, size_t size, int type);
 void delete_request(request_t *request);
 request_message_t *create_request_message(request_t *request);
-void decode_request_message(request_message_t *rm);
+//void decode_request_message(request_message_t *rm);
 void delete_request_message(request_message_t *rm);
 
 thread_args_t *create_thread_args(int fd, int thread);

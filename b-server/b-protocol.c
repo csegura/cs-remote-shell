@@ -53,17 +53,17 @@ request_t *create_request(int fd, int serial, size_t size, int type)
   request_t *request = malloc(sizeof(request_t));
   request->fd = fd;
   request->serial = serial;
-  request->size = htonl(size);
-  request->type = htons(type);
+  request->size = size; //htonl(size);
+  request->type = type; //htons(type);
   return request;
 }
 
-void decode_request_message(request_message_t *rm)
-{
-  rm->serial = ntohs(rm->serial);
-  rm->size = ntohl(rm->size);
-  rm->type = ntohs(rm->type);
-}
+// void decode_request_message(request_message_t *rm)
+// {
+//   rm->serial = ntohs(rm->serial);
+//   rm->size = ntohl(rm->size);
+//   rm->type = ntohs(rm->type);
+// }
 
 void delete_request(request_t *request)
 {
@@ -75,8 +75,8 @@ request_message_t *create_request_message(request_t *request)
   request_message_t *rm = malloc(sizeof(request_message_t));
   bzero(rm, sizeof(request_message_t));
   rm->serial = request->serial;
-  rm->size = htonl(request->size);
-  rm->type = htons(request->type);
+  rm->size = request->size; //htonl(request->size);
+  rm->type = request->type; //htons(request->type);
   return rm;
 }
 

@@ -1,4 +1,4 @@
-#include "b-funcs.h"
+#include "b-tools.h"
 #include <stdio.h>
 #include <strings.h> /* bzero */
 #include <signal.h>

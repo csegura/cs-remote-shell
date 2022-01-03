@@ -14,7 +14,7 @@
 #include "../b-server/b-tools.h"
 
 #define MAX_CONNECTIONS 50
-#define BUFFER_SIZE (1024 * 32L)
+#define BUFFER_SIZE (1024 * 64L)
 
 message_t *get_message(request_t *request)
 {
@@ -27,23 +27,15 @@ message_t *get_message(request_t *request)
 
 	size_t buffer_size = size > BUFFER_SIZE ? BUFFER_SIZE : size;
 
-	printf("%d size: %lu hash: %d | buffer: %lu\n", request->fd, size, hash, buffer_size);
-
 	message_t *message = create_message(NULL, 0);
 	char *chunk = calloc(buffer_size, sizeof(char));
 
-	printf("%d - %lu\n", request->fd, buffer_size);
+	// expected message hash
+	message->hash = hash;
 
 	while (1)
 	{
-		int received = read(request->fd, chunk, buffer_size);
-
-		// Error
-		if (received == -1)
-		{
-			perror("read");
-			exit(1);
-		}
+		int received = pass(read(request->fd, chunk, buffer_size), ERROR_READ);
 
 		message->bytes = realloc(message->bytes, message->size + received);
 		memcpy(&message->bytes[message->size], chunk, received);
@@ -54,15 +46,6 @@ message_t *get_message(request_t *request)
 			break;
 		//if (received < buffer_size)
 		//	break;
-	}
-
-	printf("message size %d\n", message->size);
-
-	message->hash = calc_hash(message);
-	printf("hash %d - message %d\n", hash, message->hash);
-	if (hash != message->hash)
-	{
-		message->hash = 0;
 	}
 
 	free(chunk);
@@ -89,12 +72,15 @@ void *client(void *args)
 	message = get_message(request);
 	end = clock();
 
-	printf("[%2d:%3d] %s RCVD: Message %s bytes in %3fms \n",
+	// check_message_hash(message);
+
+	printf("[%2d:%3d] %s RCVD: Message %s bytes in %.2fms - %.2f Mb/s\n",
 				 request->fd,
 				 request->serial,
 				 message->hash == 0 ? "FAIL" : "-OK-",
 				 bytes_to_human(message->size, buffer),
-				 ELAPSED_MS);
+				 ELAPSED_MS,
+				 SPEED_MS(message->size));
 
 	*error = message->hash == 0 ? 1 : 0;
 
@@ -207,6 +193,8 @@ int main(int argc, char **argv)
 				 ELAPSED_S,
 				 errors,
 				 bytes_to_human(size * n_requests, buffer));
+
+	printf("Speed %.2f Mb/s\n", SPEED_S(size * n_requests));
 
 	return 0;
 }

@@ -4,7 +4,10 @@
 
 /* macros for elapsed time */
 #define ELAPSED_MS ((double)(end - start) / (CLOCKS_PER_SEC / 1000))
-#define ELAPSED_S	(double)(end - start)
+#define ELAPSED_S (double)(end - start)
+
+#define SPEED_MS(size) ((size / ((double)(end - start) / CLOCKS_PER_SEC)) / (1024 * 1024))
+#define SPEED_S(size) (((size) / (double)(end - start)) / (1024 * 1024))
 
 /* utils */
 char *bytes_to_human(double bytes, char *buffer);

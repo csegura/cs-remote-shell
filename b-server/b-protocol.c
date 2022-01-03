@@ -1,4 +1,4 @@
-#include "b-funcs.h"
+#include "b-protocol.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
@@ -8,7 +8,6 @@
 
 hash_t calc_hash(message_t *message)
 {
-
   if (!message || message->size == 0)
     return 0;
 
@@ -22,6 +21,16 @@ hash_t calc_hash(message_t *message)
   }
 
   return hash % size;
+}
+
+void check_message_hash(message_t *message)
+{
+  hash_t calculated = calc_hash(message);
+  if (calculated != message->hash)
+  {
+    // error
+    message->hash = 0;
+  }
 }
 
 message_t *create_message(char *bytes, size_t size)
@@ -43,7 +52,7 @@ request_t *create_request(int fd, int serial, size_t size, int type)
 {
   request_t *request = malloc(sizeof(request_t));
   request->fd = fd;
-  request->serial = htons(serial);
+  request->serial = serial;
   request->size = htonl(size);
   request->type = htons(type);
   return request;
@@ -65,7 +74,7 @@ request_message_t *create_request_message(request_t *request)
 {
   request_message_t *rm = malloc(sizeof(request_message_t));
   bzero(rm, sizeof(request_message_t));
-  rm->serial = htons(request->serial);
+  rm->serial = request->serial;
   rm->size = htonl(request->size);
   rm->type = htons(request->type);
   return rm;

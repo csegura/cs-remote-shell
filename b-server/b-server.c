@@ -18,7 +18,7 @@
 
 #define COMMAND_LEN 24
 #define MAX_CONNECTIONS 50
-#define BUFFER_SIZE (1024 * 32L)
+#define BUFFER_SIZE (1024 * 64L)
 
 #define ASCII_START 0 //32
 #define ASCII_END 255 //126
@@ -34,23 +34,33 @@ char *gen_random_bytes(int size)
 	return bytes;
 }
 
+char *get_random_bytes(int size)
+{
+	FILE *fp;
+	char *bytes = malloc(size);
+	fp = fopen("/dev/urandom", "r");
+	fread(bytes, 1, size, fp);
+	fclose(fp);
+	return bytes;
+}
+
 void reply_request(int connfd, message_t *message)
 {
 	write(connfd, &message->size, sizeof(u_int64_t));
 	write(connfd, &message->hash, sizeof(hash_t));
 
-	size_t buffer;
-	size_t sent = 0;
-	size_t total_sent = 0;
+	// size_t buffer;
+	// size_t sent = 0;
+	// size_t total_sent = 0;
 
-	while (message->size - total_sent)
-	{
-		buffer = (message->size - total_sent) > BUFFER_SIZE ? BUFFER_SIZE : (message->size - total_sent);
-		sent = send(connfd, &message->bytes[total_sent], buffer, MSG_NOSIGNAL);
-		total_sent += sent;
-	}
+	// while (message->size - total_sent)
+	// {
+	// 	buffer = (message->size - total_sent) > BUFFER_SIZE ? BUFFER_SIZE : (message->size - total_sent);
+	// 	sent = send(connfd, &message->bytes[total_sent], buffer, MSG_NOSIGNAL);
+	// 	total_sent += sent;
+	// }
 
-	//	write(connfd, message->bytes, message->size);
+	write(connfd, message->bytes, message->size);
 }
 
 // execute command
@@ -58,7 +68,8 @@ void process_request(int connfd, request_message_t *rm)
 {
 	time_t start, end;
 	char buffer[25];
-	char *bytes = gen_random_bytes(rm->size);
+	//char *bytes = gen_random_bytes(rm->size);
+	char *bytes = get_random_bytes(rm->size);
 
 	message_t *message = create_message(bytes, rm->size);
 
@@ -66,12 +77,13 @@ void process_request(int connfd, request_message_t *rm)
 	reply_request(connfd, message);
 	end = clock();
 
-	printf("(%3d:%3d) SENT: %s bytes [%u hash] in %1fms\n",
+	printf("(%3d:%3d) SENT: %s bytes [%u hash] in %.2fms - %.2f Mb/s\n",
 				 connfd,
 				 rm->serial,
 				 bytes_to_human(message->size, buffer),
 				 message->hash,
-				 ELAPSED_MS);
+				 ELAPSED_MS,
+				 SPEED_MS(message->size));
 
 	delete_message(message);
 	delete_request_message(rm);
@@ -212,6 +224,6 @@ int main(int argc, char **argv)
 	}
 
 	wait_threads_end(thread, connection);
-
-	printf("\nEnded.");
+	shutdown(sockfd, SHUT_RDWR);
+	printf("\nServer shutdown.");
 }

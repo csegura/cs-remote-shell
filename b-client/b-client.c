@@ -56,7 +56,7 @@ void *client(void *args)
 {
 	request_t *request = (request_t *)args;
 	message_t *message;
-	time_t start, end;
+	//time_t start, end;
 	char buffer[25];
 	int *error = malloc(sizeof(int));
 
@@ -68,19 +68,24 @@ void *client(void *args)
 		pthread_exit(error);
 	}
 
-	start = clock();
+	NELAPSED(start, end);
+	NSTART(start);
+	//start = clock();
+	//time(&start);
 	message = get_message(request);
-	end = clock();
+	//end = clock();
+	//time(&end);
+	NEND(end);
 
 	// check_message_hash(message);
 
-	printf("[%2d:%3d] %s RCVD: Message %s bytes in %.2fms - %.2f Mb/s\n",
+	printf("[%2d:%3d] %s RCVD: Message %s bytes in %.5fms - %.2f Mb/s\n",
 				 request->fd,
 				 request->serial,
 				 message->hash == 0 ? "FAIL" : "-OK-",
 				 bytes_to_human(message->size, buffer),
-				 ELAPSED_MS,
-				 SPEED_MS(message->size));
+				 NELAPSED_MS(start, end),
+				 NSPEED_S(message->size, start, end));
 
 	*error = message->hash == 0 ? 1 : 0;
 
@@ -114,6 +119,14 @@ int connect_server(char *server, int port)
 			 ERROR_CONNECTION);
 
 	return sockfd;
+}
+void test()
+{
+	time_t start, end;
+	time(&start);
+	sleep(1);
+	time(&end);
+	printf("%fs\n", ELAPSED_S);
 }
 
 int main(int argc, char **argv)
@@ -157,7 +170,7 @@ int main(int argc, char **argv)
 		printf("Usage: %s -s <server> [-p <port>] -c <size_in_kb> -f <n_requests>\n", argv[0]);
 		exit(0);
 	}
-
+	test();
 	printf("n_requests: %d\n", n_requests);
 
 	int errors = 0;

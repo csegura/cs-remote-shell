@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdlib.h>  /* exit */
 #include <pthread.h> /* pthread_join */
+#include <time.h>
 
 /* convert bytes to human readable format */
 char *bytes_to_human(double bytes, char *buffer)
@@ -67,4 +68,12 @@ int wait_threads_end(pthread_t *threads, int n_threads)
   }
 
   return errors;
+}
+
+/* time */
+long time_nanos()
+{
+  struct timespec ts;
+  timespec_get(&ts, TIME_UTC);
+  return (long)ts.tv_sec * 1000000000L + ts.tv_nsec;
 }

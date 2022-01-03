@@ -37,7 +37,6 @@ message_t *get_message(request_t *request)
 	{
 		int received = read(request->fd, chunk, buffer_size);
 
-		printf(".");
 		// Error
 		if (received == -1)
 		{
@@ -109,33 +108,23 @@ void *client(void *args)
 int connect_server(char *server, int port)
 {
 
-	int sockfd, connfd;
+	int sockfd;
 	struct sockaddr_in servaddr;
 
 	// socket create and varification
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (sockfd == -1)
-	{
-		printf("Socket creation failed...\n");
-		exit(0);
-	}
-
-	bzero(&servaddr, sizeof(servaddr));
+	sockfd = pass(socket(AF_INET, SOCK_STREAM, 0), ERROR_SOCKET);
 
 	// assign IP, PORT
+	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = inet_addr(server);
 	servaddr.sin_port = htons(port);
 
 	// connect the client socket to server socket
-	connfd = connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-
-	if (connfd != 0)
-	{
-		printf("Connection failed.\n");
-		exit(0);
-	}
+	pass(connect(sockfd,
+							 (struct sockaddr *)&servaddr,
+							 sizeof(servaddr)),
+			 ERROR_CONNECTION);
 
 	return sockfd;
 }
@@ -230,7 +219,7 @@ int main(int argc, char **argv)
 
 	char buffer[25];
 	printf("Elapsed time %2fs - %d errors - %s received\n",
-				 (double)(end - start),
+				 ELAPSED_S,
 				 errors,
 				 bytes_to_human(size * n_requests, buffer));
 

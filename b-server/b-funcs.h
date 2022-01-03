@@ -4,9 +4,11 @@
 #include <stdint.h>
 
 #define ELAPSED_MS ((double)(end - start) / (CLOCKS_PER_SEC / 1000))
+#define ELAPSED_S	(double)(end - start)
 #define ERROR_SOCKET "Socket error"
 #define ERROR_BIND "Bind error (port could be in use)"
 #define ERROR_LISTEN "Listen error"
+#define ERROR_CONNECTION "Connection error"
 
 #define DEFAULT_PORT 8080
 #define DEFAULT_SERVER "127.0.0.1"
@@ -19,7 +21,6 @@ typedef struct
 {
 	int fd;
 	int thread;
-	void *other;
 } thread_args_t;
 
 typedef unsigned int hash_t;
@@ -59,10 +60,11 @@ request_message_t *create_request_message(request_t *request);
 void decode_request_message(request_message_t *rm);
 void delete_request_message(request_message_t *rm);
 
-thread_args_t *create_thread_args(int fd, char *cmd);
+thread_args_t *create_thread_args(int fd, int thread);
 void delete_thread_args(thread_args_t *args);
 
 /* utils */
 char *bytes_to_human(double bytes, char *buffer);
+int pass(int result, char *msg_error);
 
 #endif

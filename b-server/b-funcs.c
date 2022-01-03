@@ -76,10 +76,11 @@ void delete_request_message(request_message_t *rm)
   free(rm);
 }
 
-thread_args_t *create_thread_args(int sockfd, char *cmd)
+thread_args_t *create_thread_args(int sockfd, int thread)
 {
   thread_args_t *args = malloc(sizeof(thread_args_t));
   args->fd = sockfd;
+  args->thread = thread;
   return args;
 }
 
@@ -103,4 +104,15 @@ char *bytes_to_human(double bytes, char *buffer)
 
   sprintf(buffer, "%.*f %s", i ? 2 : 0, bytes, units[i]);
   return buffer;
+}
+
+/* simple error check */
+int pass(int result, char *msg_error)
+{
+  if (result == -1)
+  {
+    fprintf(stderr, "%s\n", msg_error);
+    exit(1);
+  }
+  return result;
 }

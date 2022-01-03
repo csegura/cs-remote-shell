@@ -25,14 +25,13 @@
 
 volatile sig_atomic_t running = 1;
 
-// close gracefully
 void sig_handler(int signo)
 {
-	printf("SIGNAL %d\n", signo);
+	printf("Received SIGNAL %d\n", signo);
 	running = 0;
 }
 
-void signal_handler()
+void setup_signals()
 {
 	struct sigaction signal_action;
 	signal_action.sa_handler = sig_handler;
@@ -40,30 +39,13 @@ void signal_handler()
 	signal_action.sa_flags = 0;
 	sigaction(SIGINT, &signal_action, NULL);
 
-	struct sigaction
-			oldact,
-			act = {
-					.sa_handler = SIG_IGN,
-					.sa_flags = 0,
-			};
-	sigaction(SIGPIPE, &act, &oldact);
-	// struct sigaction signal_ignore;
-	// signal_ignore.sa_handler = SIG_IGN;
-	// sigemptyset(&signal_ignore.sa_mask);
-	// signal_ignore.sa_flags = 0;
-	// sigaction(SIGPIPE, &signal_ignore, NULL);
-
-	//sigaction(SIGPIPE, &new_action, NULL);
-}
-
-int pass(int result, char *msg_error)
-{
-	if (result == -1)
-	{
-		fprintf(stderr, "%s\n", msg_error);
-		exit(1);
-	}
-	return result;
+	// struct sigaction
+	// 		oldact,
+	// 		act = {
+	// 				.sa_handler = SIG_IGN,
+	// 				.sa_flags = 0,
+	// 		};
+	// sigaction(SIGPIPE, &act, &oldact);
 }
 
 char *gen_random_bytes(int size)
@@ -192,7 +174,7 @@ int main(int argc, char **argv)
 	char address[INET_ADDRSTRLEN];
 
 	pthread_t thread[MAX_CONNECTIONS];
-	int connections = 0;
+	int connection = 0;
 
 	// get the port number from command line
 	while ((opt = getopt(argc, argv, "p:s:")) != -1)
@@ -221,11 +203,9 @@ int main(int argc, char **argv)
 	}
 
 	setbuf(stdout, NULL);
+	setup_signals();
 
 	sockfd = establish_listen_socket(address, port);
-
-	// set signal handler
-	signal_handler();
 
 	len = sizeof(cli);
 
@@ -241,20 +221,20 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		thread_args_t *args = create_thread_args(connfd, NULL);
+		thread_args_t *args = create_thread_args(connfd, connection);
 
-		if (pthread_create(&thread[connections++], NULL, server, (void *)args) < 0)
+		if (pthread_create(&thread[connection++], NULL, server, (void *)args) < 0)
 		{
 			perror("could not create thread");
 			break;
 		}
 
 		strcpy(ipstr, inet_ntoa(cli.sin_addr));
-		printf("[%3d:%3d] Connection accepted from %s\n", connections, connfd, ipstr);
+		printf("[%3d:%3d] Connection accepted from %s\n", connection, connfd, ipstr);
 
 		if (connections > MAX_CONNECTIONS)
 		{
-			printf("Maximum connections reached. (%d)\n", connections);
+			printf("Maximum connections reached. (%d)\n", connection);
 
 			wait_threads_end(thread, MAX_CONNECTIONS);
 			connections = 0;

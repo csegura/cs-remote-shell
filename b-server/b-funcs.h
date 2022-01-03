@@ -28,7 +28,7 @@ typedef struct
 {
 	int serial;
 	char pad[4];
-	size_t size;
+	uint64_t size;
 	int type;
 } request_message_t;
 

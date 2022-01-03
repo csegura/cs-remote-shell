@@ -131,7 +131,7 @@ void *server(void *args)
 	{
 
 		// print received command
-		printf("(%3d:%3d) REQU: %lu - %s \n",
+		printf("(%3d:%3d) REQU: %d - %s \n",
 					 connfd,
 					 request_message->serial,
 					 request_message->size,

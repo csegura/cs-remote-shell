@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define ELAPSED_MS	((double)(end - start) / (CLOCKS_PER_SEC/1000))
+#define ELAPSED_MS ((double)(end - start) / (CLOCKS_PER_SEC / 1000))
 #define ERROR_SOCKET "Socket error"
 #define ERROR_BIND "Bind error (port could be in use)"
 #define ERROR_LISTEN "Listen error"
@@ -28,7 +28,7 @@ typedef struct
 {
 	int serial;
 	char pad[4];
-	uint64_t size;
+	uint32_t size;
 	int type;
 } request_message_t;
 
@@ -36,14 +36,14 @@ typedef struct
 {
 	int fd;
 	int serial;
-	size_t size;
+	uint32_t size;
 	int type;
 } request_t;
 
 typedef struct
 {
 	char *bytes;
-	uint64_t size;
+	uint32_t size;
 	hash_t hash;
 } message_t;
 

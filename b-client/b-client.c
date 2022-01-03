@@ -56,7 +56,7 @@ message_t *get_message(request_t *request)
 		//	break;
 	}
 
-	printf("message size %lu\n", message->size);
+	printf("message size %d\n", message->size);
 
 	message->hash = calc_hash(message);
 	printf("hash %d - message %d\n", hash, message->hash);

@@ -26,12 +26,12 @@ message_t *get_message(request_t *request)
 
 	size_t buffer_size = size > BUFFER_SIZE ? BUFFER_SIZE : size;
 
-	printf("%d size: %u hash: %d | buffer: %u\n", request->fd, size, hash, buffer_size);
+	printf("%d size: %lu hash: %d | buffer: %lu\n", request->fd, size, hash, buffer_size);
 
 	message_t *message = create_message(NULL, 0);
 	char *chunk = calloc(buffer_size, sizeof(char));
 
-	printf("%d - %u\n", request->fd, buffer_size);
+	printf("%d - %lu\n", request->fd, buffer_size);
 
 	while (1)
 	{
@@ -56,7 +56,7 @@ message_t *get_message(request_t *request)
 		//	break;
 	}
 
-	printf("message size %d\n", message->size);
+	printf("message size %lu\n", message->size);
 
 	message->hash = calc_hash(message);
 	printf("hash %d - message %d\n", hash, message->hash);
@@ -94,7 +94,7 @@ void *client(void *args)
 				 request->serial,
 				 message->hash == 0 ? "FAIL" : "-OK-",
 				 bytes_to_human(message->size, buffer),
-				 (double)(end - start) / (CLOCKS_PER_SEC / 1000));
+				 ELAPSED_MS);
 
 	*error = message->hash == 0 ? 1 : 0;
 

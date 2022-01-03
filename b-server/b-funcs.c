@@ -93,7 +93,7 @@ char *bytes_to_human(double bytes, char *buffer)
 {
   char *units[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
   int i = 0;
-  bzero(buffer, sizeof(buffer));
+  bzero(buffer, sizeof(*buffer));
 
   while (bytes >= 1024)
   {

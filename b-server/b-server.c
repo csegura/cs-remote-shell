@@ -32,6 +32,40 @@ void sig_handler(int signo)
 	running = 0;
 }
 
+void signal_handler()
+{
+	struct sigaction signal_action;
+	signal_action.sa_handler = sig_handler;
+	sigemptyset(&signal_action.sa_mask);
+	signal_action.sa_flags = 0;
+	sigaction(SIGINT, &signal_action, NULL);
+
+	struct sigaction
+			oldact,
+			act = {
+					.sa_handler = SIG_IGN,
+					.sa_flags = 0,
+			};
+	sigaction(SIGPIPE, &act, &oldact);
+	// struct sigaction signal_ignore;
+	// signal_ignore.sa_handler = SIG_IGN;
+	// sigemptyset(&signal_ignore.sa_mask);
+	// signal_ignore.sa_flags = 0;
+	// sigaction(SIGPIPE, &signal_ignore, NULL);
+
+	//sigaction(SIGPIPE, &new_action, NULL);
+}
+
+int pass(int result, char *msg_error)
+{
+	if (result == -1)
+	{
+		fprintf(stderr, "%s\n", msg_error);
+		exit(1);
+	}
+	return result;
+}
+
 char *gen_random_bytes(int size)
 {
 	char *bytes = malloc(size);
@@ -79,7 +113,7 @@ void process_request(int connfd, request_message_t *rm)
 				 rm->serial,
 				 bytes_to_human(message->size, buffer),
 				 message->hash,
-				 (double)(end - start) / CLOCKS_PER_SEC / 1000);
+				 ELAPSED_MS);
 
 	delete_message(message);
 	delete_request_message(rm);
@@ -97,7 +131,7 @@ void *server(void *args)
 	{
 
 		// print received command
-		printf("(%3d:%3d) REQU: %d - %s \n",
+		printf("(%3d:%3d) REQU: %lu - %s \n",
 					 connfd,
 					 request_message->serial,
 					 request_message->size,
@@ -117,45 +151,30 @@ int establish_listen_socket(char *address, int port)
 	struct sockaddr_in serv_addr;
 
 	// create socket
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		printf("Socket creation error.\n");
-		exit(1);
-	}
+	sockfd = pass(socket(AF_INET, SOCK_STREAM, 0), ERROR_SOCKET);
 
 	// clear the structure
 	bzero(&serv_addr, sizeof(serv_addr));
 
 	// set the fields
 	serv_addr.sin_family = AF_INET;
-	//serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons(port);
 	inet_pton(AF_INET, address, &serv_addr.sin_addr);
 
 	// bind the socket
-	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-	{
-		printf("Bind error\n");
-		printf("Port: %d could be in use\n", port);
-		exit(1);
-	}
+	pass(bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)), ERROR_BIND);
 
 	// listen for connections
-	if (listen(sockfd, MAX_CONNECTIONS) < 0)
-	{
-		printf("Listen error\n");
-		exit(1);
-	}
+	pass(listen(sockfd, MAX_CONNECTIONS), ERROR_LISTEN);
 
-	printf("\nServer started.\nSocket successfully binded at port %d.\n", port);
+	printf("Server started.\nSocket successfully binded at port %d.\n", port);
 
 	return sockfd;
 }
 
 void wait_threads_end(pthread_t *threads, int n_threads)
 {
-	int i;
-	for (i = 0; i < n_threads; i++)
+	for (int i = 0; i < n_threads; i++)
 	{
 		pthread_join(threads[i], NULL);
 	}
@@ -165,9 +184,10 @@ void wait_threads_end(pthread_t *threads, int n_threads)
 int main(int argc, char **argv)
 {
 	int opt;
-	int sockfd, connfd, len;
+	int sockfd, connfd;
+	socklen_t len;
 	int port = DEFAULT_PORT;
-	struct sockaddr_in servaddr, cli;
+	struct sockaddr_in cli;
 	char ipstr[INET_ADDRSTRLEN];
 	char address[INET_ADDRSTRLEN];
 
@@ -194,7 +214,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!address)
+	if (!*address)
 	{
 		printf("Usage: %s -s <server> [-p <port>]\n", argv[0]);
 		exit(0);
@@ -205,12 +225,7 @@ int main(int argc, char **argv)
 	sockfd = establish_listen_socket(address, port);
 
 	// set signal handler
-	struct sigaction new_action, old_action;
-	new_action.sa_handler = sig_handler;
-	sigemptyset(&new_action.sa_mask);
-	new_action.sa_flags = 0;
-	sigaction(SIGINT, &new_action, NULL);
-	//sigaction(SIGPIPE, &new_action, NULL);
+	signal_handler();
 
 	len = sizeof(cli);
 
@@ -234,7 +249,6 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		int res = getpeername(connfd, (struct sockaddr *)&cli, &len);
 		strcpy(ipstr, inet_ntoa(cli.sin_addr));
 		printf("[%3d:%3d] Connection accepted from %s\n", connections, connfd, ipstr);
 

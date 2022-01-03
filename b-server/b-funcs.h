@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define ELAPSED_MS	((double)(end - start) / (CLOCKS_PER_SEC/1000))
+#define ERROR_SOCKET "Socket error"
+#define ERROR_BIND "Bind error (port could be in use)"
+#define ERROR_LISTEN "Listen error"
+
 #define DEFAULT_PORT 8080
 #define DEFAULT_SERVER "127.0.0.1"
 

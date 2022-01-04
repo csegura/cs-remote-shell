@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 #include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 #include "../b-server/b-protocol.h"
 #include "../b-server/b-tools.h"
@@ -68,24 +69,24 @@ void *client(void *args)
 		pthread_exit(error);
 	}
 
-	NELAPSED(start, end);
-	NSTART(start);
+	//double elapsed = 0.0;
 	//start = clock();
 	//time(&start);
+	ElapsedStart();
 	message = get_message(request);
+	ElapsedEnd();
 	//end = clock();
 	//time(&end);
-	NEND(end);
 
 	// check_message_hash(message);
 
-	printf("[%2d:%3d] %s RCVD: Message %s bytes in %.5fms - %.2f Mb/s\n",
+	printf("[%2d:%3d] %s RCVD: Message %s in %.4fs - %.2f Mb/s\n",
 				 request->fd,
 				 request->serial,
 				 message->hash == 0 ? "FAIL" : "-OK-",
 				 bytes_to_human(message->size, buffer),
-				 NELAPSED_MS(start, end),
-				 NSPEED_S(message->size, start, end));
+				 ELAPSED_SEC,
+				 SPEED_MBS(message->size));
 
 	*error = message->hash == 0 ? 1 : 0;
 
@@ -120,14 +121,6 @@ int connect_server(char *server, int port)
 
 	return sockfd;
 }
-void test()
-{
-	time_t start, end;
-	time(&start);
-	sleep(1);
-	time(&end);
-	printf("%fs\n", ELAPSED_S);
-}
 
 int main(int argc, char **argv)
 {
@@ -138,7 +131,7 @@ int main(int argc, char **argv)
 	char *command = NULL;
 	pthread_t threads[MAX_CONNECTIONS];
 	int n_threads = 0;
-	time_t start, end;
+	//time_t start, end;
 
 	while ((opt = getopt(argc, argv, "s:p:f:c:")) != -1)
 	{
@@ -170,12 +163,12 @@ int main(int argc, char **argv)
 		printf("Usage: %s -s <server> [-p <port>] -c <size_in_kb> -f <n_requests>\n", argv[0]);
 		exit(0);
 	}
-	test();
+
 	printf("n_requests: %d\n", n_requests);
 
 	int errors = 0;
 	size_t size = atoi(command) * 1024;
-	time(&start);
+	ElapsedStart();
 
 	for (int i = 0; i < n_requests; i++)
 	{
@@ -199,15 +192,15 @@ int main(int argc, char **argv)
 
 	errors += wait_threads_end(threads, n_threads);
 
-	time(&end);
+	ElapsedEnd();
 
 	char buffer[25];
 	printf("Elapsed time %2fs - %d errors - %s received\n",
-				 ELAPSED_S,
+				 ELAPSED_SEC,
 				 errors,
 				 bytes_to_human(size * n_requests, buffer));
 
-	printf("Speed %.2f Mb/s\n", SPEED_S(size * n_requests));
+	printf("Speed %.2f Mb/s\n", SPEED_MBS(size * n_requests));
 
 	return 0;
 }

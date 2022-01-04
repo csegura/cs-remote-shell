@@ -66,24 +66,26 @@ void reply_request(int connfd, message_t *message)
 // execute command
 void process_request(int connfd, request_message_t *rm)
 {
-	time_t start, end;
+	//time_t start, end;
 	char buffer[25];
 	//char *bytes = gen_random_bytes(rm->size);
 	char *bytes = get_random_bytes(rm->size);
 
 	message_t *message = create_message(bytes, rm->size);
 
-	start = clock();
+	//start = clock();
+	ElapsedStart();
 	reply_request(connfd, message);
-	end = clock();
+	ElapsedEnd();
+	//end = clock();
 
-	printf("(%3d:%3d) SENT: %s bytes [%u hash] in %.2fms - %.2f Mb/s\n",
+	printf("(%3d:%3d) SENT: %s [%u hash] in %.2fms - %.2f Mb/s\n",
 				 connfd,
 				 rm->serial,
 				 bytes_to_human(message->size, buffer),
 				 message->hash,
 				 ELAPSED_MS,
-				 SPEED_MS(message->size));
+				 SPEED_MBS(message->size));
 
 	delete_message(message);
 	delete_request_message(rm);

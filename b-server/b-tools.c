@@ -5,6 +5,7 @@
 #include <stdlib.h>  /* exit */
 #include <pthread.h> /* pthread_join */
 #include <time.h>
+#include <sys/time.h>
 
 /* convert bytes to human readable format */
 char *bytes_to_human(double bytes, char *buffer)
@@ -71,9 +72,39 @@ int wait_threads_end(pthread_t *threads, int n_threads)
 }
 
 /* time */
-long time_nanos()
+
+struct timespec time_diff(struct timespec start, struct timespec end)
 {
-  struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
-  return (long)ts.tv_sec * 1000000000L + ts.tv_nsec;
+  struct timespec elapsed;
+  elapsed.tv_nsec = end.tv_nsec - start.tv_nsec;
+  elapsed.tv_sec = end.tv_sec - start.tv_sec;
+  if (elapsed.tv_sec > 0 && elapsed.tv_nsec < 0)
+  {
+    elapsed.tv_nsec += NANO_TO_SEC;
+    elapsed.tv_sec--;
+  }
+  else if (elapsed.tv_sec < 0 && elapsed.tv_nsec > 0)
+  {
+    elapsed.tv_nsec -= NANO_TO_SEC;
+    elapsed.tv_sec++;
+  }
+  return elapsed;
+}
+
+double time_diff_sec(struct timespec start, struct timespec end)
+{
+  struct timespec elapsed = time_diff(start, end);
+  return (double)elapsed.tv_sec + (elapsed.tv_nsec / NANO_TO_SEC);
+}
+
+double time_diff_ms(struct timespec start, struct timespec end)
+{
+  struct timespec elapsed = time_diff(start, end);
+  return (double)(elapsed.tv_sec / 1000) + (elapsed.tv_nsec / NANO_TO_MS);
+}
+
+double time_diff_ns(struct timespec start, struct timespec end)
+{
+  struct timespec elapsed = time_diff(start, end);
+  return (double)(elapsed.tv_sec / NANO_TO_SEC) + elapsed.tv_nsec;
 }

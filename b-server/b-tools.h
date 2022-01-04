@@ -4,18 +4,24 @@
 
 /* macros for elapsed time */
 
-#define ELAPSED_MS ((double)(end - start) / (CLOCKS_PER_SEC/1000))
-#define ELAPSED_S (double)(end - start)
+#define NANO_TO_SEC 1000000000.0
+#define NANO_TO_MS 1000000.0
 
-#define SPEED_MS(size) ((size / ((double)(end - start) / CLOCKS_PER_SEC)) / (1024 * 1024))
-#define SPEED_S(size) (((size) / (double)(end - start)) / (1024 * 1024))
+#define ElapsedStart()   \
+  struct timespec start; \
+  clock_gettime(CLOCK_REALTIME, &start);
 
-#define NELAPSED(s,e) long s, e
-#define NSTART(s) s = time_nanos()
-#define NEND(e) e = time_nanos()
-#define NELAPSED_MS(s,e) ((e - s)/1000000.0)
-#define NELAPSED_S(s,e) ((e - s)/1000000000.0)
-#define NSPEED_S(size,s,e) ((size / ((double)(e - s) / 1000000000)) / (1024 * 1024))
+#define ElapsedEnd()   \
+  struct timespec end; \
+  clock_gettime(CLOCK_REALTIME, &end);
+
+#define ELAPSED_MS time_diff_ms(start, end)
+#define ELAPSED_SEC time_diff_sec(start, end)
+#define ELAPSED_NS time_diff_ns(start, end)
+
+#define MB_SIZE (1024 * 1024)
+#define SPEED_MBS(size) (((size) / ELAPSED_SEC) / MB_SIZE)
+
 /* utils */
 char *bytes_to_human(double bytes, char *buffer);
 int pass(int result, char *msg_error);
@@ -30,4 +36,7 @@ void setup_signals();
 /* time */
 long time_nanos();
 
+double time_diff_sec(struct timespec start, struct timespec end);
+double time_diff_ms(struct timespec start, struct timespec end);
+double time_diff_ns(struct timespec start, struct timespec end);
 #endif

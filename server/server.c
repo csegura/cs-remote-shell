@@ -58,7 +58,8 @@ char *execute_command(char *cmd)
 	if (len == 0)
 		strcpy(response, " ");
 
-	printf("RESP: %1fms - %d bytes\n%s", (double)(end - start) / CLOCKS_PER_SEC / 1000,
+	printf("RESP: %1fms - %lu bytes\n%s",
+				 (double)(end - start) / CLOCKS_PER_SEC / 1000,
 				 strlen(response),
 				 response);
 
@@ -103,7 +104,7 @@ void remote_shell(int sockfd, pid_t pid)
 int main(int argc, char **argv)
 {
 	int opt;
-	int sockfd, connfd, len;
+	int sockfd, connfd;
 	int port = DEFAULT_PORT;
 	pid_t up_pid;
 
@@ -159,11 +160,11 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, (void *)sig_handler);
 
-	len = sizeof(cli);
+	socklen_t len = sizeof(cli);
 
 	while (1)
 	{
-		// Accept the data packet from client and verification
+		// accept the data packet from client
 		connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
 
 		if (connfd < 0)
@@ -173,12 +174,12 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			int res = getpeername(connfd, (struct sockaddr *)&cli, &len);
+			// show connection
 			strcpy(ipstr, inet_ntoa(cli.sin_addr));
 			printf("(@%d) Connection accepted from %s\n", getpid(), ipstr);
 		}
 
-		// Fork - Child handles this connection, parent listens for another
+		// fork - Child handles this connection, parent listens for another
 		up_pid = fork();
 
 		if (up_pid == -1)

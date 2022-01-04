@@ -24,12 +24,13 @@ char *get_command()
 
 char *get_response(int sockfd)
 {
-	char *chunk = calloc(BUFFER_LEN, sizeof(char));
+	char *chunk = malloc(BUFFER_LEN);
 	char *response = NULL;
 	int len = 0;
 
 	while (1)
 	{
+		bzero(chunk, BUFFER_LEN);
 		int response_len = read(sockfd, chunk, BUFFER_LEN);
 		if (response_len == 0)
 			break;
@@ -38,12 +39,13 @@ char *get_response(int sockfd)
 		len += response_len;
 		if (response_len < BUFFER_LEN)
 			break;
-		bzero(chunk, BUFFER_LEN);
 	}
+
+	free(chunk);
 	return response;
 }
 
-void func(int sockfd)
+void client(int sockfd)
 {
 	char *cmd;
 	char *response;
@@ -55,14 +57,20 @@ void func(int sockfd)
 		if ((strncmp(cmd, "exit", 4)) == 0)
 		{
 			printf("Client Exit...\n");
+			free(cmd);
 			break;
 		}
+		else
+		{
 
-		write(sockfd, cmd, strlen(cmd));
+			write(sockfd, cmd, strlen(cmd));
 
-		response = get_response(sockfd);
-		printf("\nRESP: %d bytes\n%s", strlen(response), response);
-		free(response);
+			response = get_response(sockfd);
+			printf("\nRESP: %lu bytes\n%s", strlen(response), response);
+
+			free(cmd);
+			free(response);
+		}
 	}
 }
 
@@ -99,8 +107,8 @@ int main(int argc, char **argv)
 
 	printf("Connecting to %s:%d\n", server, port);
 
-	int sockfd, connfd;
-	struct sockaddr_in servaddr, cli;
+	int sockfd;
+	struct sockaddr_in servaddr;
 
 	// socket create and varification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -128,8 +136,8 @@ int main(int argc, char **argv)
 	else
 		printf("Connected.\n");
 
-	// function for chat
-	func(sockfd);
+	// client
+	client(sockfd);
 
 	// close the socket
 	close(sockfd);

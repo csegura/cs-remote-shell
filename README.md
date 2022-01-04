@@ -1,10 +1,7 @@
 # Sample Remote Shell using sockets 
 
-## Motivaltion
-
-These are sample programs that I have written to learn how linux sockets run. Why? because I had some free time, because I always have wanted understand it, because I am fivetyone years and code anything relax me. I don't know. I do a lot of crazy things.
-
 Follow me on TWITCH - https://www.twitch.tv/romheat LIVE CODE
+
 
 ## Server
 
@@ -130,9 +127,11 @@ Elapsed time 8.187156s - 0 errors - 1000.00 MB received
 Speed 122.14 Mb/s
 ```
 
+## Motivaltion
+
+These are sample programs that I have written to learn how linux sockets run. Why? because I had some free time, because I always have wanted understand it, because I am fivetyone years and code anything relax me. I don't know. I do a lot of crazy things.
 
 NOTE2: at least twenty years without writing a line in C 
-
 ### Maintainers
 
 [csegura](https://github.com/csegura).
